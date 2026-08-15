@@ -8,8 +8,9 @@ supabase
 langchain-core
 langchain-groq
 langgraph
+langgraph-checkpoint-sqlite
 groq
 pydantic
 
 opencv-python-headless
-langgraph-checkpoint-sqlite
+python-multipart
