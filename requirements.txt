@@ -4,8 +4,11 @@ python-dotenv
 requests
 cloudinary
 supabase
+
 langchain-core
 langchain-groq
 langgraph
 groq
 pydantic
+
+opencv-python-headless
