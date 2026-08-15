@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+python-dotenv
+requests
+cloudinary
+supabase
+langchain-core
+langchain-groq
+langgraph
+groq
+pydantic
