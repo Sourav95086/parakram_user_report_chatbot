@@ -12,3 +12,4 @@ groq
 pydantic
 
 opencv-python-headless
+langgraph-checkpoint-sqlite
