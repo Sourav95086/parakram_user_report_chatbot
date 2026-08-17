@@ -29,7 +29,7 @@ load_dotenv()
 # STATE
 # ==================================================
 
-class Chat(TypedDict, total=False):
+class Chat(TypedDict):
 
     messages: Annotated[
         list[BaseMessage],
@@ -46,7 +46,11 @@ class Chat(TypedDict, total=False):
     reporter_name: str
     reporter_phone: str
 
-    issue_location: dict | None
+    issue_location: str | None
+
+    latitude: float | None
+    longitude: float | None
+
     evidence: str | None
 
     report_confirmed: bool

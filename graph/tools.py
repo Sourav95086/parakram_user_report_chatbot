@@ -84,6 +84,7 @@ from langchain_core.tools import tool
 
 
 
+
 @tool
 def submit_issue(
     issue_category: str,
@@ -93,17 +94,19 @@ def submit_issue(
     reporter_name: str,
     reporter_phone: str,
     issue_location: str,
+    latitude: float,
+    longitude: float,
     evidence: str | None
 ) -> str:
-
     """
-    Submit the final confirmed citizen issue report to the Parakram API.
+    Submit a completed citizen issue report.
 
-    Evidence must be a Cloudinary URL.
-    Do not treat evidence as a local file path.
+    Use this ONLY after the user has confirmed the final report.
+
+    issue_location must contain only the city name.
+    latitude and longitude must contain the exact GPS coordinates
+    obtained from the location tool.
     """
-    print("\n🔥🔥🔥 SUBMIT_ISSUE TOOL CALLED 🔥🔥🔥")
-    print("EVIDENCE RECEIVED =", evidence)
 
     api_url = os.getenv("ISSUE_API_URL")
 
@@ -117,17 +120,29 @@ def submit_issue(
         "issue_weight": issue_weight,
         "estimated_cost_range": estimated_cost_range,
         "issue_description": issue_description,
+
         "reported_by": {
             "name": reporter_name,
             "phone": reporter_phone
         },
+
         "issue_location": issue_location,
+
+        "latitude": latitude,
+        "longitude": longitude,
+
         "evidence": evidence
     }
 
-    try:
+    print("\n====================================")
+    print("SUBMITTING ISSUE")
+    print("====================================")
+    print("City:", issue_location)
+    print("Latitude:", latitude)
+    print("Longitude:", longitude)
+    print("====================================")
 
-        print("🔥 Calling:", endpoint)
+    try:
 
         response = requests.post(
             endpoint,
@@ -135,26 +150,47 @@ def submit_issue(
             timeout=30
         )
 
-        print("🔥 API STATUS:", response.status_code)
-        print("🔥 API RESPONSE:", response.text)
-
         response.raise_for_status()
 
         data = response.json()
 
         if data.get("success"):
+
             return (
                 f"Issue reported successfully. "
-                f"Report ID: #{data.get('report_id')}"
+                f"Report ID: #{data['report_id']}"
             )
 
         return "Issue submission failed."
 
     except requests.exceptions.RequestException as e:
 
-        print("🔥 SUBMIT ERROR:", repr(e))
-
         return f"Failed to submit issue: {str(e)}"
 
 
-TOOLS = [analyse_topic , image_tool,analyze_video , get_device_location , evidence_tool ,start_issue_reporting , submit_issue]
+def get_current_location():
+
+    """
+    use this tool to fetch the current latitude and longitude of the user 
+    """
+    response = requests.get(
+        "https://ipinfo.io/json",
+        timeout=10
+    )
+
+    response.raise_for_status()
+
+    data = response.json()
+
+    latitude, longitude = map(
+        float,
+        data["loc"].split(",")
+    )
+
+    return {
+        "latitude": latitude,
+        "longitude": longitude
+    }
+
+
+TOOLS = [analyse_topic , image_tool,analyze_video , get_device_location , evidence_tool ,start_issue_reporting , submit_issue , get_current_location]
