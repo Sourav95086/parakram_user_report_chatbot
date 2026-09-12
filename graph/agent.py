@@ -197,12 +197,12 @@ workflow.add_conditional_edges(
     should_summarize,
     {
         "chatbot": "chat_node",
-        "summarize": "summarize"
+        "summarize": "summarise"
     }
 )
 
 # summarize → chatbot
-workflow.add_edge("summarize", "chat_node")
+workflow.add_edge("summarise", "chat_node")
 
 
 
