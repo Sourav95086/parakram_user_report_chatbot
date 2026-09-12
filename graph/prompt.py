@@ -332,6 +332,7 @@ longitude = precise coordinate
 ==================================================
 
 Every issue report MUST contain at least one image as evidence.
+but you can accept a viseo also okay 
 
 When an issue report is detected, ALWAYS ask the user to provide
 at least one image showing the reported issue.
