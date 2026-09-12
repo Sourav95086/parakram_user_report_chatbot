@@ -3,7 +3,7 @@ from langchain_core.messages import (
     BaseMessage,
     SystemMessage
 )
-from langchain_core.messages import AIMessage
+from langchain_core.messages import AIMessage , HumanMessage
 from langgraph.graph.message import add_messages
 import sqlite3
 from langchain_groq import ChatGroq
@@ -100,6 +100,43 @@ def chatnode(state: Chat):
         "messages": [response]
     }
 
+def should_summarize(state):
+    messages = state["messages"]
+
+    if len(messages) > 10:
+        return "summarize"
+
+    return "chatbot"
+
+# 2. Summarise older conversation
+def summarize_node(state):
+    messages = state["messages"]
+
+    summary_prompt = """
+    Summarize the following conversation.
+
+    Preserve:
+    - Important user requirements
+    - Decisions already made
+    - Important technical details
+    - Current task/progress
+    - Information needed for future responses
+
+    Remove:
+    - Repeated information
+    - Greetings
+    - Unnecessary conversational details
+    """
+
+    response = llm.invoke(
+        [HumanMessage(content=summary_prompt)] + messages
+    )
+
+    return {
+        "summary": response.content,
+        "messages": messages[-6:]
+    }
+
 
 # ==================================================
 # TOOL RESULT / CONTINUE CONVERSATION
@@ -139,6 +176,12 @@ workflow.add_node(
     tool_node
 )
 
+workflow.add_node(
+    "should_summarize",should_summarize
+)
+workflow.add_node(
+    "summarise",summarize_node
+)
 
 # ==================================================
 # START
@@ -146,8 +189,22 @@ workflow.add_node(
 
 workflow.add_edge(
     START,
-    "chat_node"
+    "should_summarize"
 )
+
+workflow.add_conditional_edges(
+    "should_summarize",
+    should_summarize,
+    {
+        "chatbot": "chat_node",
+        "summarize": "summarize"
+    }
+)
+
+# summarize → chatbot
+workflow.add_edge("summarize", "chat_node")
+
+
 
 
 # ==================================================

@@ -146,7 +146,7 @@ def chat(request: ChatRequest):
 
         config = {
             "configurable": {
-                "thread_id": request.thread_id
+                "thread_id": "thread512"
             }
         }
 
