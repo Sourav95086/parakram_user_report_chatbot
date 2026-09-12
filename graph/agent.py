@@ -8,6 +8,7 @@ from langgraph.graph.message import add_messages
 import sqlite3
 from langchain_groq import ChatGroq
 from typing import TypedDict, Annotated
+from langchain_core.messages import RemoveMessage
 
 from dotenv import load_dotenv
 
@@ -35,6 +36,8 @@ class Chat(TypedDict):
         list[BaseMessage],
         add_messages
     ]
+
+    summary: str
 
     report_mode: bool
 
@@ -80,17 +83,26 @@ llm_with_tools = llm.bind_tools(tools)
 # ==================================================
 # NORMAL / ISSUE CHAT NODE
 # ==================================================
-
 def chatnode(state: Chat):
 
     messages = state["messages"]
+    summary = state.get("summary", "")
 
     messages_with_system = [
-        SystemMessage(
-            content=SYSTEM_PROMPT
-        ),
-        *messages
+        SystemMessage(content=SYSTEM_PROMPT)
     ]
+
+    if summary:
+        messages_with_system.append(
+            SystemMessage(
+                content=f"""
+                Previous conversation summary:
+                {summary}
+                """
+            )
+        )
+
+    messages_with_system.extend(messages)
 
     response = llm_with_tools.invoke(
         messages_with_system
@@ -109,7 +121,8 @@ def should_summarize(state):
     return "chatbot"
 
 # 2. Summarise older conversation
-def summarize_node(state):
+def summarize_node(state: Chat):
+
     messages = state["messages"]
 
     summary_prompt = """
@@ -132,12 +145,15 @@ def summarize_node(state):
         [HumanMessage(content=summary_prompt)] + messages
     )
 
+    delete_messages = [
+        RemoveMessage(id=m.id)
+        for m in messages[:-6]
+    ]
+
     return {
         "summary": response.content,
-        "messages": messages[-6:]
+        "messages": delete_messages
     }
-
-
 # ==================================================
 # TOOL RESULT / CONTINUE CONVERSATION
 # ==================================================
@@ -176,9 +192,7 @@ workflow.add_node(
     tool_node
 )
 
-workflow.add_node(
-    "should_summarize",should_summarize
-)
+
 workflow.add_node(
     "summarise",summarize_node
 )
@@ -187,13 +201,8 @@ workflow.add_node(
 # START
 # ==================================================
 
-workflow.add_edge(
-    START,
-    "should_summarize"
-)
-
 workflow.add_conditional_edges(
-    "should_summarize",
+    START,
     should_summarize,
     {
         "chatbot": "chat_node",
