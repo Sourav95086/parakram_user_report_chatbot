@@ -144,37 +144,66 @@ def chat(request: ChatRequest):
 
     try:
 
+        # =====================================================
+        # THREAD ID
+        # =====================================================
+
+        thread_id = request.thread_id
+
+        if not thread_id:
+            thread_id = "default-thread"
+
         config = {
             "configurable": {
-                "thread_id": "thread"
+                "thread_id": thread_id
             }
         }
 
-        message = request.message
+        # =====================================================
+        # USER MESSAGE
+        # =====================================================
 
-        # -----------------------------------------
-        # Attach image URL if provided
-        # -----------------------------------------
+        message = request.message or ""
+
+        # =====================================================
+        # ATTACH IMAGE URL
+        # =====================================================
 
         if request.image_url:
 
             message += (
-                f"\n\n[IMAGE_URL]\n"
+                "\n\n[IMAGE_URL]\n"
                 f"{request.image_url}\n"
-                f"[/IMAGE_URL]"
+                "[/IMAGE_URL]"
             )
 
-        # -----------------------------------------
-        # Attach video URL if provided
-        # -----------------------------------------
+        # =====================================================
+        # ATTACH VIDEO URL
+        # =====================================================
 
         if request.video_url:
 
             message += (
-                f"\n\n[VIDEO_URL]\n"
+                "\n\n[VIDEO_URL]\n"
                 f"{request.video_url}\n"
-                f"[/VIDEO_URL]"
+                "[/VIDEO_URL]"
             )
+
+        # =====================================================
+        # DEBUG
+        # =====================================================
+
+        print("\n==============================")
+        print("CHAT REQUEST")
+        print("==============================")
+        print("Thread ID:", thread_id)
+        print("Message:", request.message)
+        print("Image URL:", request.image_url)
+        print("Video URL:", request.video_url)
+
+        # =====================================================
+        # INVOKE LANGGRAPH
+        # =====================================================
 
         result = chatbot.invoke(
             {
@@ -187,21 +216,91 @@ def chat(request: ChatRequest):
             config=config
         )
 
-        last_message = result["messages"][-1]
+        # =====================================================
+        # CHECK RESULT
+        # =====================================================
 
-        return {
-            "success": True,
-            "response": last_message.content,
-            "thread_id": request.thread_id
-        }
+        if not result:
+
+            raise Exception(
+                "Chatbot returned an empty result"
+            )
+
+        if "messages" not in result:
+
+            raise Exception(
+                "Chatbot result does not contain 'messages'"
+            )
+
+        messages = result["messages"]
+
+        if not messages:
+
+            raise Exception(
+                "Chatbot returned an empty messages list"
+            )
+
+        last_message = messages[-1]
+
+        response_content = last_message.content
+
+        # =====================================================
+        # HANDLE NON-STRING CONTENT
+        # =====================================================
+
+        if isinstance(response_content, list):
+
+            text_parts = []
+
+            for item in response_content:
+
+                if isinstance(item, dict):
+
+                    if item.get("type") == "text":
+
+                        text_parts.append(
+                            item.get("text", "")
+                        )
+
+                elif isinstance(item, str):
+
+                    text_parts.append(item)
+
+            response_content = "\n".join(
+                text_parts
+            )
+
+        # =====================================================
+        # RETURN RESPONSE
+        # =====================================================
+
+        print("\n==============================")
+        print("CHAT RESPONSE")
+        print("==============================")
+        print(response_content)
+
+        return ChatResponse(
+            success=True,
+            response=str(response_content),
+            thread_id=thread_id
+        )
 
     except Exception as e:
+
+        # =====================================================
+        # PRINT ACTUAL ERROR
+        # =====================================================
+
+        print("\n==============================")
+        print("CHAT ERROR")
+        print("==============================")
+        print(type(e).__name__)
+        print(str(e))
 
         raise HTTPException(
             status_code=500,
             detail=str(e)
         )
-
 @app.post("/test-image")
 def test_image(image_url: str):
 
