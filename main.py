@@ -8,7 +8,7 @@ def main():
 
     config = {
     "configurable": {
-        "thread_id": "test_user_1"
+        "thread_id": "test_user"
     }
 }
 
